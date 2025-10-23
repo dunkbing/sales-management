@@ -24,7 +24,7 @@ import {
   getPublicUrl,
   getSignedUrl,
 } from "@/lib/s3";
-import { eq, and, like, desc } from "drizzle-orm";
+import { eq, and, like, desc, or, ilike } from "drizzle-orm";
 import { z } from "zod";
 
 /**
@@ -338,17 +338,23 @@ export async function createVariant(input: z.infer<typeof variantSchema>) {
   }
 }
 
-export async function findVariantByBarcode(barcode: string) {
+export async function findVariantByBarcode(searchTerm: string) {
   const auth = await getAuthorizedSession(PERMISSIONS.PRODUCT_READ);
   if ("error" in auth) return auth;
 
-  if (!barcode || barcode.length < 3) {
-    return { error: "Invalid barcode" } as const;
+  if (!searchTerm || searchTerm.length < 1) {
+    return { error: "Invalid search term" } as const;
   }
 
   try {
-    const variant = await db.query.productVariants.findFirst({
-      where: eq(productVariants.barcode, barcode),
+    const searchPattern = `%${searchTerm}%`;
+
+    const variants = await db.query.productVariants.findMany({
+      where: or(
+        ilike(productVariants.barcode, searchPattern),
+        ilike(productVariants.sku, searchPattern),
+        ilike(productVariants.name, searchPattern),
+      ),
       with: {
         product: {
           with: {
@@ -359,19 +365,19 @@ export async function findVariantByBarcode(barcode: string) {
       },
     });
 
-    if (!variant) {
-      return { error: "Product not found" } as const;
+    // Filter by tenant access
+    const tenantVariants = variants.filter(
+      (v) => v.product.tenantId === auth.tenantId,
+    );
+
+    if (tenantVariants.length === 0) {
+      return { error: "No products found" } as const;
     }
 
-    // Verify tenant access
-    if (variant.product.tenantId !== auth.tenantId) {
-      return { error: "Product not found" } as const;
-    }
-
-    return { data: variant } as const;
+    return { data: tenantVariants } as const;
   } catch (error) {
-    console.error("Find variant by barcode error:", error);
-    return { error: "Failed to find product" } as const;
+    console.error("Find variant by search term error:", error);
+    return { error: "Failed to find products" } as const;
   }
 }
 
