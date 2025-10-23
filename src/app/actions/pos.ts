@@ -17,6 +17,7 @@ import {
   type InsertPayment,
   type InsertReturn,
   RegisterSessionWithRelations,
+  SaleWithRelations,
 } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import {
@@ -241,11 +242,19 @@ export async function listRegisterSessions(params?: {
 
 // ============= SALES REPORTS =============
 
+export type SalesSummaryData = {
+  date: string;
+  sales: SaleWithRelations[];
+  totalSales: number;
+  totalItems: number;
+  transactionCount: number;
+};
+
 export async function getSalesSummary(params: {
   storeId?: number;
   dateFrom: Date;
   dateTo: Date;
-}) {
+}): Promise<{ error?: string; data?: Record<string, SalesSummaryData> }> {
   const authResult = await getAuthorizedSession(PERMISSIONS.SALE_READ);
   if ("error" in authResult) return authResult;
 
@@ -292,7 +301,7 @@ export async function getSalesSummary(params: {
           };
         }
 
-        acc[dateKey].sales.push(sale);
+        acc[dateKey].sales.push(sale as SaleWithRelations);
         acc[dateKey].totalSales += Number.parseFloat(sale.grandTotal);
         acc[dateKey].totalItems += sale.items.reduce(
           (sum, item) => sum + item.qty,
@@ -302,16 +311,7 @@ export async function getSalesSummary(params: {
 
         return acc;
       },
-      {} as Record<
-        string,
-        {
-          date: string;
-          sales: typeof salesData;
-          totalSales: number;
-          totalItems: number;
-          transactionCount: number;
-        }
-      >,
+      {} as Record<string, SalesSummaryData>,
     );
 
     return { data: salesByDate } as const;

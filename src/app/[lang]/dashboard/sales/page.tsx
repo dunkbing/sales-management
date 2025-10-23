@@ -1,6 +1,6 @@
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 import type { Locale } from "@/lib/i18n/config";
-import { listSales, getSalesStats } from "@/app/actions/sales";
+import { listSales, getSalesStats, SalesStats } from "@/app/actions/sales";
 import SalesPageClient from "@/components/sales/SalesPageClient";
 import { RegisterProvider } from "@/contexts/RegisterContext";
 
@@ -29,7 +29,7 @@ export default async function SalesPage({
     <RegisterProvider>
       <SalesPageClient
         sales={result.sales}
-        stats={stats}
+        stats={stats as SalesStats}
         dict={dict}
         lang={lang}
       />

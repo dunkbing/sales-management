@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getSalesSummary } from "@/app/actions/pos";
+import { getSalesSummary, SalesSummaryData } from "@/app/actions/pos";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
@@ -17,14 +17,6 @@ import {
   startOfWeek,
   endOfWeek,
 } from "date-fns";
-
-type SalesSummaryData = {
-  date: string;
-  sales: any[];
-  totalSales: number;
-  totalItems: number;
-  transactionCount: number;
-};
 
 type SalesCalendarProps = {
   storeId: number;
@@ -57,7 +49,7 @@ export default function SalesCalendar({
         dateTo: monthEnd,
       });
 
-      if ("data" in result) {
+      if (result.data) {
         setSalesData(result.data);
       }
     } catch (error) {

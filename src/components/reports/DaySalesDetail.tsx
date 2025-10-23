@@ -5,38 +5,11 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-type Sale = {
-  id: number;
-  createdAt: Date;
-  grandTotal: string;
-  status: string;
-  cashier: {
-    name: string;
-  };
-  customer?: {
-    name: string;
-  } | null;
-  items: Array<{
-    qty: number;
-    price: string;
-    variant: {
-      name: string;
-      product: {
-        name: string;
-      };
-    };
-  }>;
-};
+import { SalesSummaryData } from "@/app/actions/pos";
 
 type DaySalesDetailProps = {
   date: string;
-  data: {
-    sales: Sale[];
-    totalSales: number;
-    totalItems: number;
-    transactionCount: number;
-  };
+  data: SalesSummaryData;
   onClose: () => void;
 };
 
@@ -84,7 +57,7 @@ export default function DaySalesDetail({
                   <CardTitle className="text-lg">Sale #{sale.id}</CardTitle>
                   <div className="text-sm text-gray-500 mt-1">
                     {format(new Date(sale.createdAt), "h:mm a")} •{" "}
-                    {sale.cashier.name}
+                    {sale.cashier?.name}
                     {sale.customer && ` • ${sale.customer.name}`}
                   </div>
                 </div>
@@ -108,16 +81,16 @@ export default function DaySalesDetail({
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {sale.items.map((item, idx) => (
+                {sale.items?.map((item, idx) => (
                   <div
                     key={idx}
                     className="flex items-center justify-between text-sm"
                   >
                     <div>
                       <span className="font-medium">
-                        {item.variant.product.name}
+                        {item.variant?.product?.name}
                       </span>
-                      {item.variant.name && (
+                      {item.variant?.name && (
                         <span className="text-gray-500">
                           {" "}
                           - {item.variant.name}

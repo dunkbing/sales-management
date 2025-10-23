@@ -11,9 +11,13 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { stores } from "./stores";
 import { registerSessions } from "./register";
-import { users } from "./users";
+import { SelectUser, users } from "./users";
 import { customers } from "./customers";
-import { productVariants } from "./catalog";
+import {
+  productVariants,
+  ProductVariantWithProduct,
+  SelectProductVariant,
+} from "./catalog";
 
 export const sales = pgTable("sales", {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
@@ -180,9 +184,19 @@ export type InsertSale = z.infer<typeof insertSaleSchema>;
 
 export type SelectSaleItem = typeof saleItems.$inferSelect;
 export type InsertSaleItem = z.infer<typeof insertSaleItemSchema>;
+export type SaleItemWithRelations = SelectSaleItem & {
+  variant?: ProductVariantWithProduct;
+};
 
 export type SelectPayment = typeof payments.$inferSelect;
 export type InsertPayment = z.infer<typeof insertPaymentSchema>;
 
 export type SelectReturn = typeof returns.$inferSelect;
 export type InsertReturn = z.infer<typeof insertReturnSchema>;
+
+export type SaleWithRelations = SelectSale & {
+  items?: SaleItemWithRelations[];
+  payments?: SelectPayment[];
+  cashier?: SelectUser | null;
+  customer?: SelectUser | null;
+};

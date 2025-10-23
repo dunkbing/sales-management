@@ -8,21 +8,8 @@ import DaySalesDetail from "@/components/reports/DaySalesDetail";
 import { useRegister } from "@/contexts/RegisterContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, Calendar } from "lucide-react";
-
-type SalesStats = {
-  totalSales: number;
-  totalRevenue: string;
-  paidSales: number;
-  averageOrderValue: string;
-};
-
-type SalesSummaryData = {
-  date: string;
-  sales: any[];
-  totalSales: number;
-  totalItems: number;
-  transactionCount: number;
-};
+import { SalesStats } from "@/app/actions/sales";
+import { SalesSummaryData } from "@/app/actions/pos";
 
 type SalesPageClientProps = {
   sales: any[];

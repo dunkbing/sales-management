@@ -147,12 +147,19 @@ export async function getSale(saleId: number) {
   }
 }
 
+export type SalesStats = {
+  totalSales: number;
+  totalRevenue: number;
+  paidSales: number;
+  averageOrderValue: number;
+};
+
 // Get sales statistics
 export async function getSalesStats(filters?: {
   dateFrom?: Date;
   dateTo?: Date;
   storeId?: number;
-}) {
+}): Promise<{ data?: SalesStats; error?: string }> {
   const session = await auth();
   if (!session?.user?.tenantId) {
     return { error: "Unauthorized" };
@@ -182,15 +189,15 @@ export async function getSalesStats(filters?: {
     const stats = await db
       .select({
         totalSales: sql<number>`COUNT(*)::int`,
-        totalRevenue: sql<string>`COALESCE(SUM(${sales.grandTotal}), 0)`,
+        totalRevenue: sql<number>`COALESCE(SUM(${sales.grandTotal}), 0)::float`,
         paidSales: sql<number>`COUNT(*) FILTER (WHERE ${sales.status} = 'PAID')::int`,
         refundedSales: sql<number>`COUNT(*) FILTER (WHERE ${sales.status} = 'REFUNDED')::int`,
-        averageOrderValue: sql<string>`COALESCE(AVG(${sales.grandTotal}), 0)`,
+        averageOrderValue: sql<number>`COALESCE(AVG(${sales.grandTotal}), 0)::float`,
       })
       .from(sales)
       .where(and(...conditions));
 
-    return { stats: stats[0] };
+    return { data: stats[0] };
   } catch (error) {
     console.error("Failed to get sales stats:", error);
     return { error: "Failed to load sales statistics" };

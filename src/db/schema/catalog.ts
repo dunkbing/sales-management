@@ -116,6 +116,14 @@ export type ProductVariantWithRelations = SelectProductVariant & {
   stockItems?: SelectStockItem[];
 };
 
+export type ProductVariantWithProduct = SelectProductVariant & {
+  product?: SelectProduct;
+};
+
+export type ProductWithVariants = SelectProduct & {
+  variants?: SelectProductVariant[];
+};
+
 export type ProductWithRelations = SelectProduct & {
   images?: { key: string; url: string }[];
   category?: SelectCategory | null;
