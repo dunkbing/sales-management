@@ -7,6 +7,8 @@ import {
   timestamp,
   varchar,
 } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod";
 import { stores } from "./stores";
 import { registerSessions } from "./register";
 import { users } from "./users";
@@ -135,14 +137,52 @@ export const returnsRelations = relations(returns, ({ one }) => ({
   }),
 }));
 
+// Insert schemas with validation
+export const insertSaleSchema = createInsertSchema(sales, {
+  subtotal: z.string().regex(/^\d+(\.\d{1,2})?$/, "Invalid amount format"),
+  taxTotal: z.string().regex(/^\d+(\.\d{1,2})?$/, "Invalid amount format"),
+  discountTotal: z.string().regex(/^\d+(\.\d{1,2})?$/, "Invalid amount format"),
+  grandTotal: z.string().regex(/^\d+(\.\d{1,2})?$/, "Invalid amount format"),
+}).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSaleItemSchema = createInsertSchema(saleItems, {
+  qty: z.number().int().positive(),
+  price: z.string().regex(/^\d+(\.\d{1,2})?$/, "Invalid price format"),
+  discount: z.string().regex(/^\d+(\.\d{1,2})?$/, "Invalid discount format"),
+  tax: z.string().regex(/^\d+(\.\d{1,2})?$/, "Invalid tax format"),
+  lineTotal: z.string().regex(/^\d+(\.\d{1,2})?$/, "Invalid amount format"),
+}).omit({
+  createdAt: true,
+});
+
+export const insertPaymentSchema = createInsertSchema(payments, {
+  method: z.enum(["CASH", "CARD", "QR", "VOUCHER", "BANK_TRANSFER"]),
+  amount: z.string().regex(/^\d+(\.\d{1,2})?$/, "Invalid amount format"),
+}).omit({
+  createdAt: true,
+});
+
+export const insertReturnSchema = createInsertSchema(returns, {
+  reason: z.string().min(1, "Reason is required"),
+  refundMethod: z.enum(["CASH", "CARD", "QR", "VOUCHER", "BANK_TRANSFER"]),
+  refundAmount: z.string().regex(/^\d+(\.\d{1,2})?$/, "Invalid amount format"),
+}).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type SelectSale = typeof sales.$inferSelect;
-export type InsertSale = typeof sales.$inferInsert;
+export type InsertSale = z.infer<typeof insertSaleSchema>;
 
 export type SelectSaleItem = typeof saleItems.$inferSelect;
-export type InsertSaleItem = typeof saleItems.$inferInsert;
+export type InsertSaleItem = z.infer<typeof insertSaleItemSchema>;
 
 export type SelectPayment = typeof payments.$inferSelect;
-export type InsertPayment = typeof payments.$inferInsert;
+export type InsertPayment = z.infer<typeof insertPaymentSchema>;
 
 export type SelectReturn = typeof returns.$inferSelect;
-export type InsertReturn = typeof returns.$inferInsert;
+export type InsertReturn = z.infer<typeof insertReturnSchema>;

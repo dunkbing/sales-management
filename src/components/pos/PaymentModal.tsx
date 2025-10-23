@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useCart } from "@/contexts/CartContext";
+import { useRegister } from "@/contexts/RegisterContext";
 import { createSale } from "@/app/actions/pos";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +22,7 @@ type PaymentModalProps = {
 
 export default function PaymentModal({ isOpen, onClose }: PaymentModalProps) {
   const { state, total, dispatch } = useCart();
+  const { session, storeId } = useRegister();
   const [paymentMethod, setPaymentMethod] = useState<
     "CASH" | "CARD" | "QR" | "BANK_TRANSFER"
   >("CASH");
@@ -32,17 +34,18 @@ export default function PaymentModal({ isOpen, onClose }: PaymentModalProps) {
   const change = Number.parseFloat(cashAmount) - total;
 
   const handlePayment = async () => {
+    if (!session) {
+      setError("No active register session");
+      return;
+    }
+
     setLoading(true);
     setError("");
 
     try {
-      // Note: You'll need to get these from your app state/context
-      const storeId = 1; // TODO: Get from current store context
-      const registerSessionId = 1; // TODO: Get from current session
-
       const result = await createSale({
         storeId,
-        registerSessionId,
+        registerSessionId: session.id,
         items: state.lines.map((line) => ({
           variantId: line.variantId,
           qty: line.qty,

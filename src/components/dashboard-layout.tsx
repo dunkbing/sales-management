@@ -55,7 +55,7 @@ export function DashboardLayout({
     },
     {
       name: dict.pos.title,
-      href: `/${lang}/pos`,
+      href: `/${lang}/dashboard/pos`,
       icon: ShoppingCart,
     },
     {

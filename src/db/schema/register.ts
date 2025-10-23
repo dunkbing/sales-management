@@ -6,9 +6,9 @@ import {
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
-import { stores } from "./stores";
-import { users } from "./users";
-import { sales } from "./sales";
+import { SelectStore, stores } from "./stores";
+import { SelectUser, users } from "./users";
+import { sales, SelectSale } from "./sales";
 
 export const registerSessions = pgTable("register_sessions", {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
@@ -55,3 +55,9 @@ export const registerSessionsRelations = relations(
 
 export type SelectRegisterSession = typeof registerSessions.$inferSelect;
 export type InsertRegisterSession = typeof registerSessions.$inferInsert;
+export type RegisterSessionWithRelations = SelectRegisterSession & {
+  openedBy?: SelectUser | null;
+  closedBy?: SelectUser | null;
+  store?: SelectStore | null;
+  sales?: SelectSale[];
+};

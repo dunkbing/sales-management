@@ -8,11 +8,15 @@ import {
   payments,
   returns,
   stockItems,
+  insertSaleItemSchema,
+  insertPaymentSchema,
+  insertReturnSchema,
   type InsertRegisterSession,
   type InsertSale,
   type InsertSaleItem,
   type InsertPayment,
   type InsertReturn,
+  RegisterSessionWithRelations,
 } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import {
@@ -55,7 +59,7 @@ const openRegisterSchema = z.object({
 
 export async function openRegister(input: z.infer<typeof openRegisterSchema>) {
   const authResult = await getAuthorizedSession(PERMISSIONS.REGISTER_OPEN);
-  if ("error" in authResult) return authResult;
+  if (authResult.error) return { error: authResult.error };
 
   const validated = openRegisterSchema.safeParse(input);
   if (!validated.success) {
@@ -63,18 +67,6 @@ export async function openRegister(input: z.infer<typeof openRegisterSchema>) {
   }
 
   try {
-    // Check if there's already an open session for this store
-    const existingSession = await db.query.registerSessions.findFirst({
-      where: and(
-        eq(registerSessions.storeId, validated.data.storeId),
-        isNull(registerSessions.closedAt),
-      ),
-    });
-
-    if (existingSession) {
-      return { error: "Register already open for this store" } as const;
-    }
-
     const [registerSession] = await db
       .insert(registerSessions)
       .values({
@@ -170,75 +162,105 @@ export async function closeRegister(
   }
 }
 
-export async function getCurrentSession(storeId: number) {
+export async function getRegisterSession(
+  sessionId: number,
+): Promise<{ data?: RegisterSessionWithRelations; error?: string }> {
   const authResult = await getAuthorizedSession(PERMISSIONS.REGISTER_READ);
-  if ("error" in authResult) return authResult;
+  if (authResult.error) return { error: authResult.error };
 
   try {
     const session = await db.query.registerSessions.findFirst({
-      where: and(
-        eq(registerSessions.storeId, storeId),
-        isNull(registerSessions.closedAt),
-      ),
+      where: eq(registerSessions.id, sessionId),
       with: {
         openedBy: true,
+        closedBy: true,
         store: true,
+        sales: true,
       },
     });
 
     if (!session) {
-      return { error: "No open register session" } as const;
+      return { error: "Register session not found" };
     }
 
-    return { data: session } as const;
+    return { data: session };
   } catch (error) {
-    console.error("Get current session error:", error);
-    return { error: "Failed to fetch register session" } as const;
+    console.error("Get register session error:", error);
+    return { error: "Failed to fetch register session" };
+  }
+}
+
+export async function listRegisterSessions(params?: {
+  storeId?: number;
+  openOnly?: boolean;
+}): Promise<{ data?: RegisterSessionWithRelations[]; error?: string }> {
+  const authResult = await getAuthorizedSession(PERMISSIONS.REGISTER_READ);
+  if (authResult.error) return { error: authResult.error };
+
+  try {
+    const conditions = [];
+
+    if (params?.storeId) {
+      conditions.push(eq(registerSessions.storeId, params.storeId));
+    }
+
+    if (params?.openOnly) {
+      conditions.push(isNull(registerSessions.closedAt));
+    }
+
+    const sessions = await db.query.registerSessions.findMany({
+      where: conditions.length > 0 ? and(...conditions) : undefined,
+      with: {
+        openedBy: true,
+        closedBy: true,
+        store: true,
+        sales: true,
+      },
+      orderBy: [desc(registerSessions.openedAt)],
+      limit: 50,
+    });
+
+    return { data: sessions };
+  } catch (error) {
+    console.error("List register sessions error:", error);
+    return { error: "Failed to fetch register sessions" } as const;
   }
 }
 
 // ============= SALES =============
 
-const saleItemSchema = z.object({
-  variantId: z.number().int().positive(),
-  qty: z.number().int().positive(),
-  price: z.string().regex(/^\d+(\.\d{1,2})?$/, "Invalid price format"),
-  discount: z
-    .string()
-    .regex(/^\d+(\.\d{1,2})?$/, "Invalid discount format")
-    .default("0"),
-  tax: z
-    .string()
-    .regex(/^\d+(\.\d{1,2})?$/, "Invalid tax format")
-    .default("0"),
-});
-
-const paymentSchema = z.object({
-  method: z.enum(["CASH", "CARD", "QR", "VOUCHER", "BANK_TRANSFER"]),
-  amount: z.string().regex(/^\d+(\.\d{1,2})?$/, "Invalid amount format"),
-  externalRef: z.string().optional(),
-  notes: z.string().optional(),
-});
-
 const createSaleSchema = z.object({
   storeId: z.number().int().positive(),
   registerSessionId: z.number().int().positive(),
   customerId: z.number().int().positive().optional(),
-  items: z.array(saleItemSchema).min(1, "At least one item is required"),
-  payments: z.array(paymentSchema).min(1, "At least one payment is required"),
+  items: z
+    .array(
+      insertSaleItemSchema.omit({
+        saleId: true,
+        lineTotal: true,
+      }),
+    )
+    .min(1, "At least one item is required"),
+  payments: z
+    .array(
+      insertPaymentSchema.omit({
+        saleId: true,
+      }),
+    )
+    .min(1, "At least one payment is required"),
   notes: z.string().optional(),
 });
 
 export async function createSale(input: z.infer<typeof createSaleSchema>) {
+  console.log({ input });
   const authResult = await getAuthorizedSession(PERMISSIONS.SALE_CREATE);
   if ("error" in authResult) return authResult;
 
-  const validated = createSaleSchema.safeParse(input);
-  if (!validated.success) {
-    return { error: validated.error.issues[0].message } as const;
-  }
-
   try {
+    const validated = createSaleSchema.safeParse(input);
+    if (!validated.success) {
+      return { error: validated.error.issues[0].message } as const;
+    }
     // Calculate totals
     let subtotal = 0;
     let discountTotal = 0;
@@ -268,21 +290,26 @@ export async function createSale(input: z.infer<typeof createSaleSchema>) {
 
     const result = await db.transaction(async (tx) => {
       // Create sale
-      const [sale] = await tx
-        .insert(sales)
-        .values({
-          storeId: validated.data.storeId,
-          registerSessionId: validated.data.registerSessionId,
-          cashierId: authResult.userId,
-          customerId: validated.data.customerId,
-          status: "PAID",
-          subtotal: subtotal.toString(),
-          taxTotal: taxTotal.toString(),
-          discountTotal: discountTotal.toString(),
-          grandTotal: grandTotal.toString(),
-          notes: validated.data.notes,
-        })
-        .returning();
+      const saleData: InsertSale = {
+        storeId: validated.data.storeId,
+        registerSessionId: validated.data.registerSessionId,
+        cashierId: authResult.userId,
+        status: "PAID",
+        subtotal: subtotal.toString(),
+        taxTotal: taxTotal.toString(),
+        discountTotal: discountTotal.toString(),
+        grandTotal: grandTotal.toString(),
+      };
+
+      // Only add optional fields if they are defined
+      if (validated.data.customerId !== undefined) {
+        saleData.customerId = validated.data.customerId;
+      }
+      if (validated.data.notes !== undefined) {
+        saleData.notes = validated.data.notes;
+      }
+
+      const [sale] = await tx.insert(sales).values(saleData).returning();
 
       // Create sale items and update stock
       for (const item of validated.data.items) {
@@ -330,13 +357,21 @@ export async function createSale(input: z.infer<typeof createSaleSchema>) {
 
       // Create payments
       for (const payment of validated.data.payments) {
-        await tx.insert(payments).values({
+        const paymentData: InsertPayment = {
           saleId: sale.id,
           method: payment.method,
           amount: payment.amount,
-          externalRef: payment.externalRef,
-          notes: payment.notes,
-        });
+        };
+
+        // Only add optional fields if they are defined
+        if (payment.externalRef !== undefined) {
+          paymentData.externalRef = payment.externalRef;
+        }
+        if (payment.notes !== undefined) {
+          paymentData.notes = payment.notes;
+        }
+
+        await tx.insert(payments).values(paymentData);
       }
 
       return sale;
@@ -439,13 +474,13 @@ export async function listSales(params?: {
   }
 }
 
-const refundSaleSchema = z.object({
-  saleId: z.number().int().positive(),
-  reason: z.string().min(1, "Reason is required"),
-  refundMethod: z.enum(["CASH", "CARD", "QR", "VOUCHER", "BANK_TRANSFER"]),
-  refundAmount: z.string().regex(/^\d+(\.\d{1,2})?$/, "Invalid amount format"),
-  notes: z.string().optional(),
-});
+const refundSaleSchema = insertReturnSchema
+  .extend({
+    saleId: z.number().int().positive(),
+  })
+  .omit({
+    processedByUserId: true,
+  });
 
 export async function refundSale(input: z.infer<typeof refundSaleSchema>) {
   const authResult = await getAuthorizedSession(PERMISSIONS.SALE_REFUND);
@@ -475,16 +510,22 @@ export async function refundSale(input: z.infer<typeof refundSaleSchema>) {
       }
 
       // Create return record
+      const returnData: InsertReturn = {
+        saleId: validated.data.saleId,
+        processedByUserId: authResult.userId,
+        reason: validated.data.reason,
+        refundMethod: validated.data.refundMethod,
+        refundAmount: validated.data.refundAmount,
+      };
+
+      // Only add notes if defined
+      if (validated.data.notes !== undefined) {
+        returnData.notes = validated.data.notes;
+      }
+
       const [returnRecord] = await tx
         .insert(returns)
-        .values({
-          saleId: validated.data.saleId,
-          processedByUserId: authResult.userId,
-          reason: validated.data.reason,
-          refundMethod: validated.data.refundMethod,
-          refundAmount: validated.data.refundAmount,
-          notes: validated.data.notes,
-        })
+        .values(returnData)
         .returning();
 
       // Update sale status
