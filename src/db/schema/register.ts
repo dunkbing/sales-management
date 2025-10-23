@@ -5,6 +5,7 @@ import {
   pgTable,
   text,
   timestamp,
+  varchar,
 } from "drizzle-orm/pg-core";
 import { SelectStore, stores } from "./stores";
 import { SelectUser, users } from "./users";
@@ -12,6 +13,7 @@ import { sales, SelectSale } from "./sales";
 
 export const registerSessions = pgTable("register_sessions", {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
+  name: varchar({ length: 255 }), // Optional session name
   storeId: integer("store_id")
     .notNull()
     .references(() => stores.id, { onDelete: "cascade" }),

@@ -55,6 +55,7 @@ async function getAuthorizedSession(permission: string) {
 const openRegisterSchema = z.object({
   storeId: z.number().int().positive(),
   openingFloat: z.string().regex(/^\d+(\.\d{1,2})?$/, "Invalid amount format"),
+  name: z.string().optional(),
 });
 
 export async function openRegister(input: z.infer<typeof openRegisterSchema>) {
@@ -67,13 +68,24 @@ export async function openRegister(input: z.infer<typeof openRegisterSchema>) {
   }
 
   try {
+    const sessionData: {
+      storeId: number;
+      openedByUserId: number;
+      openingFloat: string;
+      name?: string;
+    } = {
+      storeId: validated.data.storeId,
+      openedByUserId: authResult.userId,
+      openingFloat: validated.data.openingFloat,
+    };
+
+    if (validated.data.name) {
+      sessionData.name = validated.data.name;
+    }
+
     const [registerSession] = await db
       .insert(registerSessions)
-      .values({
-        storeId: validated.data.storeId,
-        openedByUserId: authResult.userId,
-        openingFloat: validated.data.openingFloat,
-      })
+      .values(sessionData)
       .returning();
 
     return { data: registerSession } as const;
@@ -93,7 +105,7 @@ export async function closeRegister(
   input: z.infer<typeof closeRegisterSchema>,
 ) {
   const authResult = await getAuthorizedSession(PERMISSIONS.REGISTER_CLOSE);
-  if ("error" in authResult) return authResult;
+  if (authResult.error) return { error: authResult.error };
 
   const validated = closeRegisterSchema.safeParse(input);
   if (!validated.success) {
@@ -224,6 +236,88 @@ export async function listRegisterSessions(params?: {
   } catch (error) {
     console.error("List register sessions error:", error);
     return { error: "Failed to fetch register sessions" } as const;
+  }
+}
+
+// ============= SALES REPORTS =============
+
+export async function getSalesSummary(params: {
+  storeId?: number;
+  dateFrom: Date;
+  dateTo: Date;
+}) {
+  const authResult = await getAuthorizedSession(PERMISSIONS.SALE_READ);
+  if ("error" in authResult) return authResult;
+
+  try {
+    const conditions = [];
+
+    if (params.storeId) {
+      conditions.push(eq(sales.storeId, params.storeId));
+    }
+
+    conditions.push(gte(sales.createdAt, params.dateFrom));
+    conditions.push(lte(sales.createdAt, params.dateTo));
+
+    const salesData = await db.query.sales.findMany({
+      where: and(...conditions),
+      with: {
+        items: {
+          with: {
+            variant: {
+              with: {
+                product: true,
+              },
+            },
+          },
+        },
+        payments: true,
+        cashier: true,
+        customer: true,
+      },
+      orderBy: [desc(sales.createdAt)],
+    });
+
+    // Group sales by date
+    const salesByDate = salesData.reduce(
+      (acc, sale) => {
+        const dateKey = sale.createdAt.toISOString().split("T")[0];
+        if (!acc[dateKey]) {
+          acc[dateKey] = {
+            date: dateKey,
+            sales: [],
+            totalSales: 0,
+            totalItems: 0,
+            transactionCount: 0,
+          };
+        }
+
+        acc[dateKey].sales.push(sale);
+        acc[dateKey].totalSales += Number.parseFloat(sale.grandTotal);
+        acc[dateKey].totalItems += sale.items.reduce(
+          (sum, item) => sum + item.qty,
+          0,
+        );
+        acc[dateKey].transactionCount += 1;
+
+        return acc;
+      },
+      {} as Record<
+        string,
+        {
+          date: string;
+          sales: typeof salesData;
+          totalSales: number;
+          totalItems: number;
+          transactionCount: number;
+        }
+      >,
+    );
+
+    return { data: salesByDate } as const;
+  } catch (error) {
+    console.error("Get sales summary error:", error);
+    return { error: "Failed to fetch sales summary" } as const;
   }
 }
 

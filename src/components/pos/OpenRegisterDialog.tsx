@@ -27,7 +27,8 @@ export default function OpenRegisterDialog({
   onSessionCreated,
 }: OpenRegisterDialogProps) {
   const { storeId, setSession } = useRegister();
-  const [openingFloat, setOpeningFloat] = useState("100.00");
+  const [name, setName] = useState("");
+  const [openingFloat, setOpeningFloat] = useState("100000");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -39,6 +40,7 @@ export default function OpenRegisterDialog({
       const result = await openRegister({
         storeId,
         openingFloat,
+        name: name.trim() || undefined,
       });
 
       if ("error" in result) {
@@ -46,6 +48,9 @@ export default function OpenRegisterDialog({
       } else {
         setSession(result.data);
         onOpenChange(false);
+        // Reset form
+        setName("");
+        setOpeningFloat("100000");
         // Notify parent that session was created
         onSessionCreated?.(result.data.id);
       }
@@ -62,11 +67,29 @@ export default function OpenRegisterDialog({
         <DialogHeader>
           <DialogTitle>Open Register</DialogTitle>
           <DialogDescription>
-            Enter the starting cash amount in the register drawer.
+            Create a new register session to start selling.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
+          <div>
+            <Label htmlFor="session-name">
+              Session Name <span className="text-gray-400">(Optional)</span>
+            </Label>
+            <Input
+              id="session-name"
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g., Morning Shift, Counter 1"
+              className="mt-2"
+              autoFocus
+            />
+            <p className="text-sm text-gray-500 mt-1">
+              Give this session a name to easily identify it later.
+            </p>
+          </div>
+
           <div>
             <Label htmlFor="opening-float">Opening Cash Float</Label>
             <Input
@@ -77,10 +100,9 @@ export default function OpenRegisterDialog({
               step="1000"
               min="0"
               className="mt-2"
-              autoFocus
             />
             <p className="text-sm text-gray-500 mt-1">
-              This is the starting cash in the drawer for making change.
+              Starting cash amount in the drawer for making change.
             </p>
           </div>
 

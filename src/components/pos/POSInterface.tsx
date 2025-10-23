@@ -13,13 +13,9 @@ import { ShoppingCart, DoorClosed } from "lucide-react";
 
 type POSInterfaceProps = {
   sessionId: number;
-  onClose?: () => void;
 };
 
-export default function POSInterface({
-  sessionId,
-  onClose,
-}: POSInterfaceProps) {
+export default function POSInterface({ sessionId }: POSInterfaceProps) {
   const { state, total } = useCart();
   const { session, setSession } = useRegister();
   const [showPayment, setShowPayment] = useState(false);
@@ -79,9 +75,6 @@ export default function POSInterface({
               {error || "Unable to load register session"}
             </p>
           </div>
-          {onClose && (
-            <Button onClick={onClose}>Back to Register Dashboard</Button>
-          )}
         </div>
       </div>
     );
@@ -145,7 +138,6 @@ export default function POSInterface({
       <CloseRegisterDialog
         isOpen={showCloseRegister}
         onOpenChange={setShowCloseRegister}
-        onRegisterClosed={onClose}
       />
       {showPayment && (
         <PaymentModal

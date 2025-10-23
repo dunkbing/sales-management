@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { listRegisterSessions, openRegister } from "@/app/actions/pos";
+import { listRegisterSessions } from "@/app/actions/pos";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +19,7 @@ import { useRegister } from "@/contexts/RegisterContext";
 import { CartProvider } from "@/contexts/CartContext";
 import { Dialog, DialogContent, DialogTitle } from "../ui/dialog";
 import POSInterface from "./POSInterface";
+import OpenRegisterDialog from "./OpenRegisterDialog";
 import { RegisterSessionWithRelations } from "@/db/schema";
 
 type RegisterListProps = {};
@@ -28,11 +29,11 @@ export default function RegisterList({}: RegisterListProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [filter, setFilter] = useState<"all" | "open">("all");
-  const { storeId, setSession } = useRegister();
+  const { storeId } = useRegister();
   const [selectedSessionId, setSelectedSessionId] = useState<number | null>(
     null,
   );
-  const [creatingSession, setCreatingSession] = useState(false);
+  const [showOpenDialog, setShowOpenDialog] = useState(false);
   const [showPOSModal, setShowPOSModal] = useState(false);
 
   const handleOpenSession = (sessionId: number) => {
@@ -46,26 +47,14 @@ export default function RegisterList({}: RegisterListProps) {
     loadSessions();
   }, [storeId, filter]);
 
-  const handleNewSession = async () => {
-    setCreatingSession(true);
-    try {
-      const result = await openRegister({
-        storeId,
-        openingFloat: "0",
-      });
+  const handleNewSession = () => {
+    setShowOpenDialog(true);
+  };
 
-      if ("error" in result) {
-        console.error("Failed to create session:", result.error);
-      } else {
-        setSession(result.data);
-        setSelectedSessionId(result.data.id);
-        setShowPOSModal(true);
-      }
-    } catch (error) {
-      console.error("Failed to create session:", error);
-    } finally {
-      setCreatingSession(false);
-    }
+  const handleSessionCreated = (sessionId: number) => {
+    setSelectedSessionId(sessionId);
+    setShowPOSModal(true);
+    loadSessions(); // Reload the list
   };
 
   const loadSessions = async () => {
@@ -102,18 +91,9 @@ export default function RegisterList({}: RegisterListProps) {
             Manage and view your register sessions
           </p>
         </div>
-        <Button onClick={handleNewSession} size="lg" disabled={creatingSession}>
-          {creatingSession ? (
-            <>
-              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              Creating...
-            </>
-          ) : (
-            <>
-              <Plus className="mr-2 h-5 w-5" />
-              New Session
-            </>
-          )}
+        <Button onClick={handleNewSession} size="lg">
+          <Plus className="mr-2 h-5 w-5" />
+          New Session
         </Button>
       </div>
 
@@ -299,6 +279,12 @@ export default function RegisterList({}: RegisterListProps) {
           })}
         </div>
       )}
+
+      <OpenRegisterDialog
+        isOpen={showOpenDialog}
+        onOpenChange={setShowOpenDialog}
+        onSessionCreated={handleSessionCreated}
+      />
 
       <CartProvider>
         {selectedSessionId && (
