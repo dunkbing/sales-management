@@ -217,7 +217,37 @@
     "suppliersDescription": "Manage your supplier database",
     "viewStockLevels": "View Stock Levels",
     "viewPurchaseOrders": "View Purchase Orders",
-    "viewSuppliers": "View Suppliers"
+    "viewSuppliers": "View Suppliers",
+    "stock": {
+      "title": "Stock Levels",
+      "description": "Manage inventory across all stores",
+      "selectStore": "Select Store",
+      "allStores": "All Stores",
+      "product": "Product",
+      "variant": "Variant",
+      "sku": "SKU",
+      "onHand": "On Hand",
+      "reserved": "Reserved",
+      "available": "Available",
+      "reorderPoint": "Reorder Point",
+      "actions": "Actions",
+      "adjustStock": "Adjust Stock",
+      "lowStock": "Low Stock",
+      "outOfStock": "Out of Stock",
+      "noStock": "No stock items found",
+      "adjust": {
+        "title": "Adjust Stock",
+        "description": "Add or remove stock for this product",
+        "quantity": "Quantity",
+        "quantityPlaceholder": "Enter quantity (use - for decrease)",
+        "reason": "Reason",
+        "reasonPlaceholder": "e.g., ADJUSTMENT, DAMAGE, LOST",
+        "notes": "Notes",
+        "notesPlaceholder": "Optional notes",
+        "adjusting": "Adjusting...",
+        "submit": "Adjust Stock"
+      }
+    }
   },
   "reports": {
     "title": "Reports",
