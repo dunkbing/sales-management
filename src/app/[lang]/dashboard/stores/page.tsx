@@ -23,7 +23,7 @@ export default async function StoresPage({
     );
   }
 
-  const stores = "data" in result ? result.data : [];
+  const stores = result.data ? result.data : [];
 
   return (
     <div className="p-8 space-y-4">

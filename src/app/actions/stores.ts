@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/db";
-import { stores, type InsertStore } from "@/db/schema";
+import { SelectStore, stores, type InsertStore } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import {
   abilityFromSession,
@@ -78,9 +78,12 @@ export async function createStore(input: z.infer<typeof storeSchema>) {
   }
 }
 
-export async function listStores() {
+export async function listStores(): Promise<{
+  data?: SelectStore[];
+  error?: string;
+}> {
   const authResult = await getAuthorizedSession(PERMISSIONS.STORE_READ);
-  if ("error" in authResult) return authResult;
+  if (authResult.error) return { error: authResult.error };
 
   try {
     const result = await db.query.stores.findMany({

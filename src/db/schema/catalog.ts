@@ -114,6 +114,7 @@ export type SelectProductVariant = typeof productVariants.$inferSelect;
 export type InsertProductVariant = typeof productVariants.$inferInsert;
 export type ProductVariantWithRelations = SelectProductVariant & {
   stockItems?: SelectStockItem[];
+  product?: SelectProduct;
 };
 
 export type ProductVariantWithProduct = SelectProductVariant & {

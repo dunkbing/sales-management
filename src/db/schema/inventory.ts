@@ -9,7 +9,11 @@ import {
 } from "drizzle-orm/pg-core";
 import { tenants } from "./tenants";
 import { stores } from "./stores";
-import { productVariants } from "./catalog";
+import {
+  productVariants,
+  ProductVariantWithRelations,
+  SelectProductVariant,
+} from "./catalog";
 import { users } from "./users";
 
 export const suppliers = pgTable("suppliers", {
@@ -196,6 +200,10 @@ export type InsertSupplier = typeof suppliers.$inferInsert;
 
 export type SelectStockItem = typeof stockItems.$inferSelect;
 export type InsertStockItem = typeof stockItems.$inferInsert;
+
+export type StockItemWithRelations = SelectStockItem & {
+  variant?: ProductVariantWithRelations;
+};
 
 export type SelectStockMove = typeof stockMoves.$inferSelect;
 export type InsertStockMove = typeof stockMoves.$inferInsert;

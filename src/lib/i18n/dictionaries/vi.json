@@ -217,7 +217,37 @@
     "suppliersDescription": "Quản lý danh sách nhà cung cấp",
     "viewStockLevels": "Xem tồn kho",
     "viewPurchaseOrders": "Xem đơn đặt hàng",
-    "viewSuppliers": "Xem nhà cung cấp"
+    "viewSuppliers": "Xem nhà cung cấp",
+    "stock": {
+      "title": "Tồn kho",
+      "description": "Quản lý tồn kho tại các cửa hàng",
+      "selectStore": "Chọn cửa hàng",
+      "allStores": "Tất cả cửa hàng",
+      "product": "Sản phẩm",
+      "variant": "Phiên bản",
+      "sku": "Mã SKU",
+      "onHand": "Tồn kho",
+      "reserved": "Đã đặt",
+      "available": "Khả dụng",
+      "reorderPoint": "Điểm đặt lại",
+      "actions": "Thao tác",
+      "adjustStock": "Điều chỉnh tồn kho",
+      "lowStock": "Sắp hết",
+      "outOfStock": "Hết hàng",
+      "noStock": "Không tìm thấy sản phẩm trong kho",
+      "adjust": {
+        "title": "Điều chỉnh tồn kho",
+        "description": "Thêm hoặc bớt tồn kho cho sản phẩm này",
+        "quantity": "Số lượng",
+        "quantityPlaceholder": "Nhập số lượng (dùng - để giảm)",
+        "reason": "Lý do",
+        "reasonPlaceholder": "vd: ĐIỀU CHỈNH, HƯ HỎNG, MẤT MÁT",
+        "notes": "Ghi chú",
+        "notesPlaceholder": "Ghi chú tùy chọn",
+        "adjusting": "Đang điều chỉnh...",
+        "submit": "Điều chỉnh tồn kho"
+      }
+    }
   },
   "reports": {
     "title": "Báo cáo",

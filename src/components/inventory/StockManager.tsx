@@ -22,21 +22,11 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import AdjustStockDialog from "@/components/inventory/AdjustStockDialog";
 import { Loader2, AlertTriangle, Package } from "lucide-react";
-import type { SelectStore, SelectStockItem } from "@/db/schema";
-
-type StockItemWithRelations = SelectStockItem & {
-  variant?: {
-    name: string;
-    sku: string;
-    barcode?: string | null;
-    product?: {
-      name: string;
-    };
-  };
-};
+import type { SelectStore, StockItemWithRelations } from "@/db/schema";
+import { Dictionary } from "@/lib/i18n/get-dictionary";
 
 type StockManagerProps = {
-  dict: any;
+  dict: Dictionary;
 };
 
 export default function StockManager({ dict }: StockManagerProps) {
@@ -51,12 +41,12 @@ export default function StockManager({ dict }: StockManagerProps) {
   useEffect(() => {
     async function loadStores() {
       const result = await listStores();
-      if ("data" in result) {
+      if (result.data) {
         setStores(result.data);
         if (result.data.length > 0) {
           setSelectedStoreId(result.data[0].id.toString());
         }
-      } else {
+      } else if (result.error) {
         setError(result.error);
       }
       setLoading(false);
@@ -70,9 +60,9 @@ export default function StockManager({ dict }: StockManagerProps) {
     async function loadStock() {
       setLoading(true);
       const result = await listStockByStore(Number.parseInt(selectedStoreId));
-      if ("data" in result) {
-        setStockItems(result.data as StockItemWithRelations[]);
-      } else {
+      if (result.data) {
+        setStockItems(result.data);
+      } else if (result.error) {
         setError(result.error);
       }
       setLoading(false);

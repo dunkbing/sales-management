@@ -13,6 +13,7 @@ import {
   type InsertSupplier,
   type InsertPurchaseOrder,
   type InsertPurchaseOrderItem,
+  StockItemWithRelations,
 } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import {
@@ -79,9 +80,11 @@ export async function getStockLevel(variantId: number, storeId: number) {
   }
 }
 
-export async function listStockByStore(storeId: number) {
+export async function listStockByStore(
+  storeId: number,
+): Promise<{ error?: string; data?: StockItemWithRelations[] }> {
   const authResult = await getAuthorizedSession(PERMISSIONS.INVENTORY_READ);
-  if ("error" in authResult) return authResult;
+  if (authResult.error) return { error: authResult.error };
 
   try {
     const result = await db.query.stockItems.findMany({
